@@ -28,7 +28,7 @@ def plotDframe(df, title):
     plt.ylabel('Y-axis')
     plt.title(title)
     plt.tight_layout()
-    plt.savefig(title+".png")
+    plt.savefig("./images/"+title+".png")
     plt.close()
     #plt.show()
 
@@ -45,7 +45,7 @@ def plotKmeanResults(df, results, title = "KMeans Clustering Results"):
         #plot the cluster points
         plt.scatter(cluster_points[:,0], cluster_points[:,1], alpha=0.5, marker='o', label=f'Cluster {label}')
     #plot cluster centers
-    plt.scatter(results['centers'][:,0], results['centers'][:,1], color='black', marker='X', s=10, label='Centers')
+    plt.scatter(results['centers'][:,0], results['centers'][:,1], color='black', marker='X',  label='Centers')
     #plot outliers
     outlier_points = df[results['mask_outliers']]
     plt.scatter(outlier_points[:,0], outlier_points[:,1], color='red', alpha=0.5, marker='x', label='Outliers')
@@ -54,7 +54,7 @@ def plotKmeanResults(df, results, title = "KMeans Clustering Results"):
     plt.title(title)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(title+".png")
+    plt.savefig("./images/"+title+".png")
     plt.close()
         
        
@@ -64,7 +64,8 @@ def plotKmeanResults(df, results, title = "KMeans Clustering Results"):
 #Converts all values to numeric, replacing non-numeric with 0.0
 def dfSimplePreproccess(ds_name):
     df = pd.read_csv(ds_name, on_bad_lines='skip', header=None)
-    df = df.apply(pd.to_numeric, errors='coerce').fillna(0.0)
+    df = df.apply(pd.to_numeric, errors='coerce')
+    df = df.dropna()
     return df
 
 
@@ -75,14 +76,21 @@ def calculateZscores(df):
 #Runs KMeans clustering on the given dataframe
 #Returns labels, centers, distances from centers, outlier indices and mask for outliers
 def runKMeans(df, k=5, outlier_percentile=99):
-    kmeans = KMeans(n_clusters=k,random_state=42, n_init='auto', init='k-means++')
+    kmeans = KMeans(n_clusters=k,random_state=None, n_init='auto', max_iter=300)
     labels = kmeans.fit_predict(df)
     centers = kmeans.cluster_centers_
     dists = np.linalg.norm(
         df - centers[labels], axis=1
     )
-    threshold = np.percentile(dists, 99)
-    mask_outliers = dists > threshold
+
+    thresholds = np.zeros(k)
+    for cluster in range(k):
+        cluster_dists = dists[labels == cluster]
+        thresholds[cluster] = np.percentile(cluster_dists, outlier_percentile)
+
+
+
+    mask_outliers = dists > thresholds[labels]
     outliers_idx = np.where(mask_outliers)[0]
     return {
         "labels": labels,
@@ -102,9 +110,15 @@ def main():
     dfZscores = calculateZscores(df)
     plotDframe(dfZscores,"Z-scores Scatter Plot")
     
-    simpleKmeansResults = runKMeans(dfZscores, k=5, outlier_percentile=99)
+    simpleKmeansResults = runKMeans(dfZscores, k=5, outlier_percentile=99.99)
     plotKmeanResults(dfZscores, simpleKmeansResults, title="KMeans Clustering with Outliers")
 
+    kmeansInRaw = runKMeans(df, k=5, outlier_percentile=99.99)
+    plotKmeanResults(df, kmeansInRaw, title="KMeans Clustering with Outliers in Raw Data")
+
+   
+    
+   
     
 
 if __name__ == "__main__":
