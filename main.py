@@ -76,6 +76,37 @@ def calculateZscores(df):
 #Runs KMeans clustering on the given dataframe
 #Returns labels, centers, distances from centers, outlier indices and mask for outliers
 def runKMeans(df, k=5, outlier_percentile=99):
+    """
+    Perform K-Means clustering with outlier detection.
+
+    This function applies K-Means clustering to the input data and identifies outliers
+    within each cluster based on a percentile threshold of distances from cluster centers.
+
+    Parameters
+    ----------
+    df : array-like of shape (n_samples, n_features)
+        Input data to be clustered.
+    k : int, default=5
+        Number of clusters to form.
+    outlier_percentile : float, default=99
+        Percentile threshold for outlier detection within each cluster.
+        Points with distances greater than this percentile are marked as outliers.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the following keys:
+        - "labels" : ndarray of shape (n_samples,)
+            Cluster labels for each sample.
+        - "centers" : ndarray of shape (k, n_features)
+            Coordinates of the k cluster centers.
+        - "distances" : ndarray of shape (n_samples,)
+            Euclidean distances from each sample to its assigned cluster center.
+        - "outliers_idx" : ndarray of shape (n_outliers,)
+            Indices of detected outliers.
+        - "mask_outliers" : ndarray of shape (n_samples,), dtype=bool
+            Boolean mask indicating outlier status for each sample.
+    """
     kmeans = KMeans(n_clusters=k,random_state=None, n_init='auto', max_iter=300)
     labels = kmeans.fit_predict(df)
     centers = kmeans.cluster_centers_
